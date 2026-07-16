@@ -21,7 +21,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-export const Route = createFileRoute("/timeline/$id")({
+export const Route = createFileRoute("/_authenticated/timeline/$id")({
   head: () => ({
     meta: [
       { title: "Editor — Timeline Studio" },
