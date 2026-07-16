@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { actions, formatDate, useTimelines } from "@/lib/timeline-store";
+import { actions, formatDate, useHydrated, useTimelines } from "@/lib/timeline-store";
 import { Star, Plus, MoreHorizontal, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -32,6 +32,7 @@ const TEMPLATES = [
 
 function DashboardPage() {
   const timelines = useTimelines();
+  const hydrated = useHydrated();
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
 
@@ -101,7 +102,9 @@ function DashboardPage() {
               />
             </div>
 
-            {filtered.length === 0 ? (
+            {!hydrated ? (
+              <TimelineGridSkeleton />
+            ) : filtered.length === 0 ? (
               <EmptyState onCreate={() => {
                 const t = actions.createTimeline();
                 navigate({ to: "/timeline/$id", params: { id: t.id } });
@@ -116,7 +119,12 @@ function DashboardPage() {
           </section>
 
           {/* Favorites */}
-          {favorites.length > 0 && (
+          {!hydrated ? (
+            <section>
+              <h2 className="font-display text-xl tracking-tight mb-4">Favorites</h2>
+              <FavoritesSkeleton />
+            </section>
+          ) : favorites.length > 0 ? (
             <section>
               <h2 className="font-display text-xl tracking-tight mb-4">Favorites</h2>
               <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
