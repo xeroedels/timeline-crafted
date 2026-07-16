@@ -305,3 +305,38 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
     </div>
   );
 }
+
+function TimelineGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-hidden>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="p-5 bg-surface/40 border border-border rounded-2xl animate-pulse"
+        >
+          <div className="h-4 w-2/3 rounded bg-white/5 mb-3" />
+          <div className="h-3 w-1/3 rounded bg-white/5 mb-5" />
+          <div className="h-14 rounded-lg bg-background/40 border border-border" />
+          <div className="h-3 w-1/4 rounded bg-white/5 mt-4" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FavoritesSkeleton() {
+  return (
+    <div className="flex gap-4 overflow-x-hidden pb-2 -mx-1 px-1" aria-hidden>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="shrink-0 w-64 p-4 bg-surface/40 border border-border rounded-2xl animate-pulse"
+        >
+          <div className="h-3 w-16 rounded bg-white/5 mb-4" />
+          <div className="h-4 w-3/4 rounded bg-white/5 mb-2" />
+          <div className="h-3 w-1/3 rounded bg-white/5" />
+        </div>
+      ))}
+    </div>
+  );
+}
