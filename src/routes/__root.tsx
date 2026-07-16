@@ -125,6 +125,25 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    let mounted = false;
+    // Use a dynamic import to avoid pulling supabase into SSR bundle unnecessarily
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED")
+          return;
+        router.invalidate();
+        if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      });
+      if (!mounted) mounted = true;
+      return () => sub.subscription.unsubscribe();
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [queryClient, router]);
 
   return (
     <QueryClientProvider client={queryClient}>

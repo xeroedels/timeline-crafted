@@ -21,7 +21,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 
-export const Route = createFileRoute("/timeline/$id")({
+export const Route = createFileRoute("/_authenticated/timeline/$id")({
   head: () => ({
     meta: [
       { title: "Editor — Timeline Studio" },
@@ -69,7 +69,7 @@ function EditorPage() {
             It may have been deleted, or the link is broken.
           </p>
           <Link
-            to="/"
+            to="/dashboard"
             className="inline-flex items-center gap-2 px-4 py-2 bg-mint text-mint-foreground rounded-md text-sm font-semibold hover:brightness-110"
           >
             <ArrowLeft className="size-4" /> Back to dashboard
@@ -87,7 +87,7 @@ function EditorPage() {
   const handleDelete = () => {
     if (confirm(`Delete "${timeline.name}"? This cannot be undone.`)) {
       actions.deleteTimeline(timeline.id);
-      navigate({ to: "/" });
+      navigate({ to: "/dashboard" });
     }
   };
 
@@ -133,7 +133,7 @@ function EditorPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                <Link to="/" className="hover:text-foreground transition-colors">
+                <Link to="/dashboard" className="hover:text-foreground transition-colors">
                   Workspace
                 </Link>
                 <span>/</span>
