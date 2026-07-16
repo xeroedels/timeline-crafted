@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
-import { actions, formatDate, useTimelines } from "@/lib/timeline-store";
+import { actions, formatDate, useHydrated, useTimelines } from "@/lib/timeline-store";
 import { Star, Plus, MoreHorizontal, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -32,6 +32,7 @@ const TEMPLATES = [
 
 function DashboardPage() {
   const timelines = useTimelines();
+  const hydrated = useHydrated();
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
 
@@ -101,7 +102,9 @@ function DashboardPage() {
               />
             </div>
 
-            {filtered.length === 0 ? (
+            {!hydrated ? (
+              <TimelineGridSkeleton />
+            ) : filtered.length === 0 ? (
               <EmptyState onCreate={() => {
                 const t = actions.createTimeline();
                 navigate({ to: "/timeline/$id", params: { id: t.id } });
@@ -116,7 +119,12 @@ function DashboardPage() {
           </section>
 
           {/* Favorites */}
-          {favorites.length > 0 && (
+          {!hydrated ? (
+            <section>
+              <h2 className="font-display text-xl tracking-tight mb-4">Favorites</h2>
+              <FavoritesSkeleton />
+            </section>
+          ) : favorites.length > 0 ? (
             <section>
               <h2 className="font-display text-xl tracking-tight mb-4">Favorites</h2>
               <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
@@ -143,7 +151,7 @@ function DashboardPage() {
                 ))}
               </div>
             </section>
-          )}
+          ) : null}
 
           {/* Templates */}
           <section>
@@ -294,6 +302,41 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
       >
         <Plus className="size-4" /> New timeline
       </button>
+    </div>
+  );
+}
+
+function TimelineGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" aria-hidden>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="p-5 bg-surface/40 border border-border rounded-2xl animate-pulse"
+        >
+          <div className="h-4 w-2/3 rounded bg-white/5 mb-3" />
+          <div className="h-3 w-1/3 rounded bg-white/5 mb-5" />
+          <div className="h-14 rounded-lg bg-background/40 border border-border" />
+          <div className="h-3 w-1/4 rounded bg-white/5 mt-4" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FavoritesSkeleton() {
+  return (
+    <div className="flex gap-4 overflow-x-hidden pb-2 -mx-1 px-1" aria-hidden>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div
+          key={i}
+          className="shrink-0 w-64 p-4 bg-surface/40 border border-border rounded-2xl animate-pulse"
+        >
+          <div className="h-3 w-16 rounded bg-white/5 mb-4" />
+          <div className="h-4 w-3/4 rounded bg-white/5 mb-2" />
+          <div className="h-3 w-1/3 rounded bg-white/5" />
+        </div>
+      ))}
     </div>
   );
 }
