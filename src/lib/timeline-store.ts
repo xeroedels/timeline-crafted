@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 export type EventCategory = "milestone" | "quarterly" | "review" | "launch" | "note";
 
@@ -154,13 +154,19 @@ function subscribe(l: Listener) {
 
 // --- hooks ---------------------------------------------------------------
 
+const EMPTY: Timeline[] = [];
+
 export function useTimelines(): Timeline[] {
-  const [, force] = useState(0);
-  useEffect(() => subscribe(() => force((n) => n + 1)) as () => void, []);
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
-  if (!hydrated) return [];
-  return getStore().timelines;
+  return useSyncExternalStore(
+    (l) => {
+      listeners.add(l);
+      return () => {
+        listeners.delete(l);
+      };
+    },
+    () => getStore().timelines,
+    () => EMPTY,
+  );
 }
 
 export function useTimeline(id: string | undefined): Timeline | undefined {
