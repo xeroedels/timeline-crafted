@@ -151,7 +151,7 @@ function DashboardPage() {
                 ))}
               </div>
             </section>
-          )}
+          ) : null}
 
           {/* Templates */}
           <section>
