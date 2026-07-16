@@ -283,7 +283,14 @@ export const actions = {
           : t,
       ),
     );
-    const dbPatch: Record<string, unknown> = {};
+    const dbPatch: {
+      title?: string;
+      description?: string;
+      date?: string;
+      category?: string;
+      tags?: string[];
+      color?: string;
+    } = {};
     if (patch.title !== undefined) dbPatch.title = patch.title;
     if (patch.description !== undefined) dbPatch.description = patch.description;
     if (patch.date !== undefined) dbPatch.date = patch.date;
