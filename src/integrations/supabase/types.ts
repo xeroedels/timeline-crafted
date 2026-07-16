@@ -14,7 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      timeline_events: {
+        Row: {
+          category: string
+          color: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          tags: string[]
+          timeline_id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          color?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          tags?: string[]
+          timeline_id: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          color?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          tags?: string[]
+          timeline_id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timeline_events_timeline_id_fkey"
+            columns: ["timeline_id"]
+            isOneToOne: false
+            referencedRelation: "timelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timelines: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string
+          favorite: boolean
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          favorite?: boolean
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          favorite?: boolean
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
