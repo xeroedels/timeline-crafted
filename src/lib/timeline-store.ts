@@ -1,4 +1,4 @@
-import { useCallback, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 export type EventCategory = "milestone" | "quarterly" | "review" | "launch" | "note";
 
@@ -172,6 +172,16 @@ export function useTimelines(): Timeline[] {
 export function useTimeline(id: string | undefined): Timeline | undefined {
   const timelines = useTimelines();
   return timelines.find((t) => t.id === id);
+}
+
+/**
+ * True after the client has mounted. Use to avoid rendering "empty state"
+ * UI during SSR / initial hydration when the store snapshot is still empty.
+ */
+export function useHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  return hydrated;
 }
 
 // --- actions -------------------------------------------------------------
