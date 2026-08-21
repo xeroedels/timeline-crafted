@@ -175,6 +175,7 @@ function EditorPage() {
 
               <div className="mt-2 font-mono text-xs text-muted-foreground">
                 Autosaved · {events.length} events
+                {timeline.stages.length ? ` · ${timeline.stages.map((s) => s.name).join(" → ")}` : ""}
               </div>
             </div>
 

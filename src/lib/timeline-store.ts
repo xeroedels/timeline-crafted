@@ -13,6 +13,13 @@ export interface TimelineEvent {
   color: "mint" | "violet";
 }
 
+export interface TimelineStage {
+  id: string;
+  name: string;
+  sortOrder: number;
+  requiresApproval: boolean;
+}
+
 export interface Timeline {
   id: string;
   name: string;
@@ -21,13 +28,26 @@ export interface Timeline {
   createdAt: number;
   updatedAt: number;
   events: TimelineEvent[];
+  stages: TimelineStage[];
+  mode: "personal" | "team";
+  templateId: string | null;
+  workspaceId: string | null;
 }
+
+export type CreateTimelineInput = {
+  name?: string;
+  templateId?: string | null;
+  mode?: "personal" | "team";
+  stages?: { name: string; requiresApproval?: boolean }[];
+};
 
 interface StoreShape {
   timelines: Timeline[];
   loaded: boolean;
   userId: string | null;
 }
+
+let activeWorkspaceId: string | null = null;
 
 let cache: StoreShape = { timelines: [], loaded: false, userId: null };
 const listeners = new Set<() => void>();
@@ -45,15 +65,89 @@ function localId(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function mapTimelineRow(
+  t: {
+    id: string;
+    name: string;
+    description: string | null;
+    favorite: boolean | null;
+    created_at: string;
+    updated_at: string;
+    mode?: string | null;
+    template_id?: string | null;
+    workspace_id?: string | null;
+  },
+  events: TimelineEvent[],
+  stages: TimelineStage[],
+): Timeline {
+  return {
+    id: t.id,
+    name: t.name,
+    description: t.description ?? "",
+    favorite: !!t.favorite,
+    createdAt: new Date(t.created_at).getTime(),
+    updatedAt: new Date(t.updated_at).getTime(),
+    events,
+    stages,
+    mode: t.mode === "team" ? "team" : "personal",
+    templateId: t.template_id ?? null,
+    workspaceId: t.workspace_id ?? null,
+  };
+}
+
 async function loadFromDb(userId: string) {
-  const [tlRes, evRes] = await Promise.all([
-    supabase
+  let query = supabase
+    .from("timelines")
+    .select("*")
+    .is("deleted_at", null)
+    .order("updated_at", { ascending: false });
+
+  query = activeWorkspaceId
+    ? query.eq("workspace_id", activeWorkspaceId)
+    : query.is("workspace_id", null).eq("user_id", userId);
+
+  const tlRes = await query;
+  if (tlRes.error) {
+    console.error("[timeline-store] load", tlRes.error);
+    const fallback = await supabase
       .from("timelines")
       .select("*")
       .is("deleted_at", null)
-      .order("updated_at", { ascending: false }),
-    supabase.from("timeline_events").select("*"),
-  ]);
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+    const ids = (fallback.data ?? []).map((t) => t.id);
+    const evRes = ids.length
+      ? await supabase.from("timeline_events").select("*").in("timeline_id", ids)
+      : { data: [] };
+    const byTimeline = new Map<string, TimelineEvent[]>();
+    (evRes.data ?? []).forEach((e) => {
+      const arr = byTimeline.get(e.timeline_id) ?? [];
+      arr.push({
+        id: e.id,
+        title: e.title,
+        description: e.description ?? "",
+        date: e.date,
+        category: e.category as EventCategory,
+        tags: e.tags ?? [],
+        color: (e.color === "violet" ? "violet" : "mint") as "mint" | "violet",
+      });
+      byTimeline.set(e.timeline_id, arr);
+    });
+    const timelines: Timeline[] = (fallback.data ?? []).map((t) =>
+      mapTimelineRow(t, byTimeline.get(t.id) ?? [], []),
+    );
+    setCache({ timelines, loaded: true, userId });
+    return;
+  }
+  const ids = (tlRes.data ?? []).map((t) => t.id);
+
+  const [evRes, stRes] = ids.length
+    ? await Promise.all([
+        supabase.from("timeline_events").select("*").in("timeline_id", ids),
+        supabase.from("timeline_stages").select("*").in("timeline_id", ids).order("sort_order"),
+      ])
+    : [{ data: [] }, { data: [] }];
+
   const byTimeline = new Map<string, TimelineEvent[]>();
   (evRes.data ?? []).forEach((e) => {
     const arr = byTimeline.get(e.timeline_id) ?? [];
@@ -68,16 +162,31 @@ async function loadFromDb(userId: string) {
     });
     byTimeline.set(e.timeline_id, arr);
   });
-  const timelines: Timeline[] = (tlRes.data ?? []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    description: t.description ?? "",
-    favorite: !!t.favorite,
-    createdAt: new Date(t.created_at).getTime(),
-    updatedAt: new Date(t.updated_at).getTime(),
-    events: byTimeline.get(t.id) ?? [],
-  }));
+
+  const stagesByTimeline = new Map<string, TimelineStage[]>();
+  (stRes.data ?? []).forEach((s) => {
+    const arr = stagesByTimeline.get(s.timeline_id) ?? [];
+    arr.push({
+      id: s.id,
+      name: s.name,
+      sortOrder: s.sort_order,
+      requiresApproval: s.requires_approval,
+    });
+    stagesByTimeline.set(s.timeline_id, arr);
+  });
+
+  const timelines: Timeline[] = (tlRes.data ?? []).map((t) =>
+    mapTimelineRow(t, byTimeline.get(t.id) ?? [], stagesByTimeline.get(t.id) ?? []),
+  );
   setCache({ timelines, loaded: true, userId });
+}
+
+export function setTimelineSpace(workspaceId: string | null) {
+  activeWorkspaceId = workspaceId;
+}
+
+export function reloadTimelines() {
+  if (cache.userId) void loadFromDb(cache.userId);
 }
 
 let bootstrapped = false;
@@ -150,9 +259,18 @@ function fireAndForget<T>(p: PromiseLike<T>) {
 }
 
 export const actions = {
-  createTimeline(name = "Untitled Timeline"): Timeline {
+  createTimeline(input: string | CreateTimelineInput = "Untitled Timeline"): Timeline {
+    const opts: CreateTimelineInput = typeof input === "string" ? { name: input } : input;
     const id = localId();
     const now = Date.now();
+    const name = opts.name ?? "Untitled Timeline";
+    const mode = opts.mode ?? (activeWorkspaceId ? "team" : "personal");
+    const stages: TimelineStage[] = (opts.stages ?? []).map((s, i) => ({
+      id: localId(),
+      name: s.name,
+      sortOrder: i,
+      requiresApproval: !!s.requiresApproval,
+    }));
     const t: Timeline = {
       id,
       name,
@@ -161,11 +279,36 @@ export const actions = {
       createdAt: now,
       updatedAt: now,
       events: [],
+      stages,
+      mode,
+      templateId: opts.templateId ?? null,
+      workspaceId: activeWorkspaceId,
     };
     patchLocal((ts) => [t, ...ts]);
     if (cache.userId) {
+      const userId = cache.userId;
       fireAndForget(
-        supabase.from("timelines").insert({ id, user_id: cache.userId, name }),
+        (async () => {
+          await supabase.from("timelines").insert({
+            id,
+            user_id: userId,
+            name,
+            mode,
+            template_id: opts.templateId ?? null,
+            workspace_id: activeWorkspaceId,
+          });
+          if (stages.length) {
+            await supabase.from("timeline_stages").insert(
+              stages.map((s) => ({
+                id: s.id,
+                timeline_id: id,
+                name: s.name,
+                sort_order: s.sortOrder,
+                requires_approval: s.requiresApproval,
+              })),
+            );
+          }
+        })(),
       );
     }
     return t;
@@ -189,6 +332,7 @@ export const actions = {
     const newId = localId();
     const now = Date.now();
     const events = src.events.map((e) => ({ ...e, id: localId() }));
+    const stages = src.stages.map((s) => ({ ...s, id: localId() }));
     const copy: Timeline = {
       ...src,
       id: newId,
@@ -197,6 +341,7 @@ export const actions = {
       createdAt: now,
       updatedAt: now,
       events,
+      stages,
     };
     patchLocal((ts) => [copy, ...ts]);
     const userId = cache.userId;
@@ -207,7 +352,21 @@ export const actions = {
           user_id: userId,
           name: copy.name,
           description: copy.description,
+          mode: copy.mode,
+          template_id: copy.templateId,
+          workspace_id: copy.workspaceId,
         });
+        if (copy.stages.length) {
+          await supabase.from("timeline_stages").insert(
+            copy.stages.map((s) => ({
+              id: s.id,
+              timeline_id: newId,
+              name: s.name,
+              sort_order: s.sortOrder,
+              requires_approval: s.requiresApproval,
+            })),
+          );
+        }
         if (events.length) {
           await supabase.from("timeline_events").insert(
             events.map((e) => ({
@@ -360,12 +519,16 @@ export const actions = {
       const newId = localId();
       const now = Date.now();
       const events = (parsed.events ?? []).map((e) => ({ ...e, id: localId() }));
+      const stages = (parsed.stages ?? []).map((s) => ({ ...s, id: localId() }));
       const t: Timeline = {
         ...parsed,
         id: newId,
         createdAt: now,
         updatedAt: now,
         events,
+        stages,
+        workspaceId: activeWorkspaceId,
+        mode: activeWorkspaceId ? "team" : (parsed.mode ?? "personal"),
       };
       patchLocal((ts) => [t, ...ts]);
       const userId = cache.userId;
@@ -377,7 +540,21 @@ export const actions = {
             name: t.name,
             description: t.description,
             favorite: t.favorite,
+            mode: t.mode,
+            template_id: t.templateId,
+            workspace_id: t.workspaceId,
           });
+          if (stages.length) {
+            await supabase.from("timeline_stages").insert(
+              stages.map((s) => ({
+                id: s.id,
+                timeline_id: newId,
+                name: s.name,
+                sort_order: s.sortOrder,
+                requires_approval: s.requiresApproval,
+              })),
+            );
+          }
           if (events.length) {
             await supabase.from("timeline_events").insert(
               events.map((e) => ({

@@ -1,6 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
+import { CreateWorkspaceDialog } from "@/components/CreateWorkspaceDialog";
 import { actions, formatDate, useHydrated, useTimelines } from "@/lib/timeline-store";
+import { createFromTemplate } from "@/lib/create-from-template";
+import { templatesForSpace, type TimelineTemplate } from "@/lib/templates";
+import { useSpace } from "@/lib/space-store";
 import { Star, Plus, MoreHorizontal, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -17,23 +21,18 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
 });
 
-const TEMPLATES = [
-  { name: "Novel writing", accent: "mint", blurb: "Chapters, drafts, revisions." },
-  { name: "Game development", accent: "violet", blurb: "Sprints, alpha, launch." },
-  { name: "Company roadmap", accent: "mint", blurb: "Quarters and milestones." },
-  { name: "Relationship timeline", accent: "violet", blurb: "Moments that mattered." },
-  { name: "Family tree", accent: "mint", blurb: "Generations and events." },
-  { name: "Project management", accent: "violet", blurb: "Phases and reviews." },
-  { name: "Historical timeline", accent: "mint", blurb: "Eras and turning points." },
-  { name: "Travel journal", accent: "violet", blurb: "Trips, cities, memories." },
-  { name: "Life milestones", accent: "mint", blurb: "The years so far." },
-];
-
 function DashboardPage() {
   const timelines = useTimelines();
   const hydrated = useHydrated();
+  const space = useSpace();
   const [query, setQuery] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [teamTemplate, setTeamTemplate] = useState<TimelineTemplate | null>(null);
   const navigate = useNavigate();
+
+  const inWorkspace = !!space.currentWorkspaceId;
+  const workspace = space.workspaces.find((w) => w.id === space.currentWorkspaceId);
+  const templates = templatesForSpace(inWorkspace ? "team" : "personal");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -49,8 +48,14 @@ function DashboardPage() {
     favorites: favorites.length,
   };
 
-  const createFromTemplate = (name: string) => {
-    const t = actions.createTimeline(name);
+  const startTemplate = (tpl: TimelineTemplate, asPersonal = false) => {
+    if (tpl.kind === "team" && !inWorkspace && !asPersonal) {
+      setTeamTemplate(tpl);
+      return;
+    }
+    const t = createFromTemplate(tpl, {
+      asPersonal: asPersonal || (!inWorkspace && tpl.kind === "personal"),
+    });
     navigate({ to: "/timeline/$id", params: { id: t.id } });
   };
 
@@ -68,28 +73,82 @@ function DashboardPage() {
         <div className="relative mx-auto max-w-6xl space-y-16 p-8 md:p-16">
           <section className="motion-reveal max-w-3xl">
             <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.2em] text-coral">
-              Workspace
+              {inWorkspace ? workspace?.name ?? "Workspace" : "Personal"}
             </p>
 
             <h1 className="font-serif text-5xl leading-[0.95] tracking-[-0.045em] md:text-7xl">
-              Craft time, <span className="text-coral">beautifully.</span>
+              {inWorkspace ? (
+                <>
+                  Work across <span className="text-coral">teams.</span>
+                </>
+              ) : (
+                <>
+                  Craft time, <span className="text-coral">beautifully.</span>
+                </>
+              )}
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-8 text-muted-foreground">
-              Design interactive timelines for novels, roadmaps, journeys, and lives — with a
-              luminous, keyboard-first editor.
+              {inWorkspace
+                ? "Projects in this workspace are shared with members. Stages are ready — handoff approval comes next."
+                : "Design interactive timelines for novels, roadmaps, journeys, and lives. Same email can also join team workspaces."}
             </p>
           </section>
 
+          {!inWorkspace && hydrated && timelines.length === 0 && (
+            <section className="grid gap-6 md:grid-cols-2">
+              <button
+                onClick={() => {
+                  const t = actions.createTimeline();
+                  navigate({ to: "/timeline/$id", params: { id: t.id } });
+                }}
+                className="border-t border-ink/20 bg-tint/70 p-8 text-left transition-all hover:-translate-y-1 hover:border-coral"
+              >
+                <div className="font-serif text-2xl">Start on your own</div>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  Personal templates for novels, travel, and life — private to this account.
+                </p>
+              </button>
+              <button
+                onClick={() => setCreateOpen(true)}
+                className="border-t border-ink/20 bg-tint/70 p-8 text-left transition-all hover:-translate-y-1 hover:border-coral"
+              >
+                <div className="font-serif text-2xl">Create a workspace</div>
+                <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  Invite people by email. One company room, many logins — like Trello.
+                </p>
+              </button>
+            </section>
+          )}
+
+          {inWorkspace && (
+            <p className="text-sm text-muted-foreground">
+              {space.memberCount} member{space.memberCount === 1 ? "" : "s"}
+              {space.invites.filter((i) => !i.acceptedAt).length
+                ? ` · ${space.invites.filter((i) => !i.acceptedAt).length} pending invite(s)`
+                : ""}
+            </p>
+          )}
+
           <section className="grid grid-cols-2 gap-8 md:grid-cols-3">
-            <StatCard label="Active Timelines" value={String(stats.total)} accent="mint" />
+            <StatCard
+              label={inWorkspace ? "Active projects" : "Active Timelines"}
+              value={String(stats.total)}
+              accent="mint"
+            />
             <StatCard label="Total Events" value={String(stats.events)} accent="violet" />
-            <StatCard label="Favorites" value={String(stats.favorites)} accent="mint" />
+            <StatCard
+              label={inWorkspace ? "Pending approval" : "Favorites"}
+              value={inWorkspace ? "0" : String(stats.favorites)}
+              accent="mint"
+            />
           </section>
 
           <section>
             <div className="mb-6 flex items-end justify-between gap-6">
-              <h2 className="font-serif text-3xl tracking-tight">Recent timelines</h2>
+              <h2 className="font-serif text-3xl tracking-tight">
+                {inWorkspace ? "Recent projects" : "Recent timelines"}
+              </h2>
 
               <input
                 type="text"
@@ -162,18 +221,23 @@ function DashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-8 md:grid-cols-3">
-              {TEMPLATES.map((tpl) => (
+              {templates.map((tpl) => (
                 <button
-                  key={tpl.name}
-                  onClick={() => createFromTemplate(tpl.name)}
+                  key={tpl.id}
+                  onClick={() => startTemplate(tpl)}
                   className="group border-t border-ink/20 bg-tint/60 p-6 text-left transition-all hover:-translate-y-1 hover:border-coral hover:bg-tint"
                 >
-                  <div
-                    className={
-                      "mb-5 size-8 rounded-full " +
-                      (tpl.accent === "mint" ? "bg-coral/20" : "bg-violet/20")
-                    }
-                  />
+                  <div className="mb-4 flex items-center justify-between gap-2">
+                    <div
+                      className={
+                        "size-8 rounded-full " +
+                        (tpl.accent === "mint" ? "bg-coral/20" : "bg-violet/20")
+                      }
+                    />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {tpl.kind === "team" ? "Team" : "Personal"}
+                    </span>
+                  </div>
 
                   <div className="font-serif text-xl transition-colors group-hover:text-coral">
                     {tpl.name}
@@ -186,10 +250,55 @@ function DashboardPage() {
           </section>
 
           <footer className="border-t border-ink/10 pt-10 text-center text-xs text-muted-foreground">
-            ChronoFlow · Synced to your account
+            {inWorkspace
+              ? `${workspace?.name} · Synced for everyone in this workspace`
+              : "ChronoFlow · Synced to your account"}
           </footer>
         </div>
       </div>
+
+      <CreateWorkspaceDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+
+      {teamTemplate && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 px-4">
+          <button
+            className="absolute inset-0"
+            onClick={() => setTeamTemplate(null)}
+            aria-label="Close"
+          />
+          <div className="relative w-full max-w-md border-t border-ink/20 bg-paper p-8">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-coral">
+              Team template
+            </p>
+            <h2 className="font-serif text-2xl">{teamTemplate.name}</h2>
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">
+              This template is built for a shared workspace. Create one, or use the stages here as a
+              personal outline.
+            </p>
+            <div className="mt-8 flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setTeamTemplate(null);
+                  setCreateOpen(true);
+                }}
+                className="bg-ink py-3 text-sm font-medium text-paper"
+              >
+                Create a workspace
+              </button>
+              <button
+                onClick={() => {
+                  const tpl = teamTemplate;
+                  setTeamTemplate(null);
+                  startTemplate(tpl, true);
+                }}
+                className="border border-ink/20 py-3 text-sm"
+              >
+                Use as personal phases
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   );
 }
@@ -242,7 +351,9 @@ function TimelineCard({
           </div>
 
           <div className="mt-2 text-xs text-muted-foreground">
-            Updated {formatDate(new Date(timeline.updatedAt).toISOString().slice(0, 10))}
+            {timeline.stages.length
+              ? timeline.stages.map((s) => s.name).join(" → ")
+              : `Updated ${formatDate(new Date(timeline.updatedAt).toISOString().slice(0, 10))}`}
           </div>
         </div>
 
