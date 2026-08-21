@@ -10,23 +10,30 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="motion-reveal flex min-h-screen items-center justify-center overflow-hidden bg-paper px-4 text-ink">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
+        <div className="mx-auto mb-8 grid size-10 place-items-center rounded-full bg-ink shadow-[0_12px_28px_rgba(37,35,31,0.16)]">
+          <div className="size-2 rounded-full bg-coral" />
+        </div>
+
+        <h1 className="font-serif text-8xl leading-none tracking-[-0.06em] text-ink">404</h1>
+
+        <h2 className="mt-6 font-serif text-3xl leading-tight text-ink">Page not found</h2>
+
+        <p className="mt-4 text-sm leading-7 text-muted-foreground">
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
-        <div className="mt-6">
+
+        <div className="mt-8">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:brightness-110"
+            className="group inline-flex items-center justify-center gap-2 bg-ink px-6 py-3 text-sm font-medium text-paper transition-transform hover:-translate-y-0.5"
           >
             Go home
+            <span className="transition-transform group-hover:translate-x-1">→</span>
           </Link>
         </div>
       </div>
@@ -37,32 +44,37 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="motion-reveal flex min-h-screen items-center justify-center overflow-hidden bg-paper px-4 text-ink">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+        <div className="mx-auto mb-8 grid size-10 place-items-center rounded-full bg-ink shadow-[0_12px_28px_rgba(37,35,31,0.16)]">
+          <div className="size-2 rounded-full bg-coral" />
+        </div>
+
+        <h1 className="font-serif text-3xl leading-tight tracking-tight text-ink">
+          This page didn&apos;t load
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+
+        <p className="mt-4 text-sm leading-7 text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:brightness-110"
+            className="group inline-flex items-center justify-center gap-2 bg-ink px-6 py-3 text-sm font-medium text-paper transition-transform hover:-translate-y-0.5"
           >
             Try again
+            <span className="transition-transform group-hover:rotate-90">↻</span>
           </button>
+
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-2"
+            className="inline-flex items-center justify-center border border-ink/20 bg-tint px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-tint-strong"
           >
             Go home
           </a>
@@ -77,17 +89,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Timeline Studio — Beautiful interactive timelines" },
+      { title: "ChronoFlow — Plan Visually. Track Effortlessly." },
       {
         name: "description",
         content:
-          "Timeline Studio is a premium editor for building beautiful, interactive timelines — from novels and roadmaps to travel journals and life milestones.",
+          "Plan projects, study schedules, events, roadmaps, travel, and more with ChronoFlow — the visual planning platform for everyone.",
       },
-      { name: "author", content: "Timeline Studio" },
-      { property: "og:title", content: "Timeline Studio" },
+      { name: "author", content: "ChronoFlow" },
+      { property: "og:title", content: "ChronoFlow" },
       {
         property: "og:description",
-        content: "Craft beautiful interactive timelines for any purpose.",
+        content:
+          "Visual planning made simple. Create timelines, roadmaps, study plans, events, and more.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -99,7 +112,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap",
       },
     ],
   }),
@@ -132,8 +145,7 @@ function RootComponent() {
     // Use a dynamic import to avoid pulling supabase into SSR bundle unnecessarily
     import("@/integrations/supabase/client").then(({ supabase }) => {
       const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED")
-          return;
+        if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
         router.invalidate();
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       });

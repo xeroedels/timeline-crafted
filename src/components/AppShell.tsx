@@ -34,32 +34,30 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-background text-foreground">
-      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-border bg-sidebar/60 backdrop-blur-xl p-4">
-        <Link to="/dashboard" className="flex items-center gap-3 px-2 mb-8">
-          <div className="size-8 rounded-lg bg-gradient-to-br from-mint to-violet p-[1px]">
-            <div className="size-full bg-background rounded-[7px] flex items-center justify-center">
-              <div className="size-3 rounded-full bg-mint animate-pulse" />
-            </div>
+    <div className="flex h-screen w-full overflow-hidden bg-[#f4f1eb] text-[#25231f]">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-[#25231f]/10 bg-[#ebe6de]/70 p-5 backdrop-blur-xl md:flex">
+        <Link to="/dashboard" className="group mb-10 flex items-center gap-3 px-2">
+          <div className="logo-mark grid size-9 place-items-center rounded-full bg-[#25231f]">
+            <div className="size-2 rounded-full bg-[#c86b4d]" />
           </div>
-          <span className="font-display text-lg font-semibold tracking-tight">
-            Timeline Studio
-          </span>
+
+          <span className="font-serif text-lg tracking-tight">ChronoFlow</span>
         </Link>
 
-        <nav className="space-y-1">
+        <nav className="space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = pathname === "/dashboard" && item.to.startsWith("/dashboard");
+
             return (
               <Link
                 key={item.to}
                 to="/dashboard"
                 className={
-                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors " +
+                  "flex items-center gap-3 border-l-2 px-3 py-2.5 text-sm transition-all " +
                   (active
-                    ? "bg-white/5 text-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]")
+                    ? "border-[#c86b4d] bg-[#f4f1eb]/70 font-medium text-[#25231f]"
+                    : "border-transparent text-[#777169] hover:border-[#c86b4d]/50 hover:bg-[#f4f1eb]/50 hover:text-[#25231f]")
                 }
               >
                 <Icon className="size-4" />
@@ -69,52 +67,55 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
           })}
         </nav>
 
-        <div className="mt-6">
-          <div className="px-3 mb-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <div className="mt-7">
+          <div className="mb-3 px-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#777169]">
             Recent
           </div>
-          <div className="space-y-0.5 max-h-64 overflow-y-auto">
+
+          <div className="max-h-64 space-y-1 overflow-y-auto">
             {timelines.slice(0, 6).map((t) => (
               <Link
                 key={t.id}
                 to="/timeline/$id"
                 params={{ id: t.id }}
                 className={
-                  "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors " +
+                  "flex items-center gap-2 px-3 py-2 text-xs transition-colors " +
                   (pathname === `/timeline/${t.id}`
-                    ? "bg-white/5 text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/[0.03]")
+                    ? "bg-[#f4f1eb]/70 text-[#25231f]"
+                    : "text-[#777169] hover:bg-[#f4f1eb]/50 hover:text-[#25231f]")
                 }
               >
-                <span className="size-1.5 rounded-full bg-mint/70 shrink-0" />
+                <span className="size-1.5 shrink-0 rounded-full bg-[#c86b4d]" />
                 <span className="truncate">{t.name}</span>
               </Link>
             ))}
+
             {timelines.length === 0 && (
-              <div className="px-3 py-1.5 text-xs text-muted-foreground/60">
-                Nothing yet
-              </div>
+              <div className="px-3 py-2 text-xs text-[#777169]/60">Nothing yet</div>
             )}
           </div>
         </div>
 
-        <div className="mt-auto space-y-3">
-          <div className="p-3 bg-mint/10 rounded-xl border border-mint/20">
-            <p className="text-[11px] font-mono text-mint uppercase tracking-wider mb-2">
+        <div className="mt-auto space-y-4">
+          <div className="border-t border-[#c86b4d]/40 bg-[#c86b4d]/10 p-4">
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.16em] text-[#c86b4d]">
               Cloud sync
             </p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
+
+            <p className="text-xs leading-6 text-[#777169]">
               Your timelines are saved to your account and available on any device.
             </p>
           </div>
+
           {email && (
-            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-border bg-surface/40">
-              <span className="text-xs text-muted-foreground truncate">{email}</span>
+            <div className="flex items-center justify-between gap-2 border-t border-[#25231f]/15 px-3 py-3">
+              <span className="truncate text-xs text-[#777169]">{email}</span>
+
               <button
                 onClick={handleSignOut}
                 aria-label="Sign out"
                 title="Sign out"
-                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                className="p-1 text-[#777169] transition-colors hover:text-[#c86b4d]"
               >
                 <LogOut className="size-3.5" />
               </button>
@@ -123,33 +124,35 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <header className="h-14 shrink-0 border-b border-border flex items-center justify-between px-4 md:px-6 gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link to="/dashboard" className="md:hidden font-display font-semibold">
-              Timeline Studio
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[#25231f]/10 px-4 md:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link to="/dashboard" className="font-serif text-lg tracking-tight md:hidden">
+              ChronoFlow
             </Link>
+
             {title && (
-              <div className="hidden md:block font-display text-sm text-muted-foreground truncate">
+              <div className="hidden truncate font-serif text-lg text-[#777169] md:block">
                 {title}
               </div>
             )}
           </div>
 
-          <div className="flex-1 max-w-md hidden sm:block">
+          <div className="hidden max-w-md flex-1 sm:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[#777169]" />
+
               <input
                 type="text"
                 placeholder="Search timelines..."
-                className="w-full bg-surface border border-border rounded-lg py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-mint/50 transition-all placeholder:text-muted-foreground"
+                className="w-full border-b border-[#25231f]/20 bg-transparent py-2 pl-9 pr-4 text-sm outline-none transition-colors placeholder:text-[#777169] focus:border-[#c86b4d]"
               />
             </div>
           </div>
 
           <button
             onClick={handleCreate}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-mint text-mint-foreground rounded-md text-xs font-semibold hover:brightness-110 transition-all"
+            className="inline-flex items-center gap-1.5 bg-[#25231f] px-4 py-2.5 text-xs font-medium text-[#f4f1eb] transition-transform hover:-translate-y-0.5"
           >
             <Plus className="size-3.5" />
             <span className="hidden sm:inline">New Timeline</span>
